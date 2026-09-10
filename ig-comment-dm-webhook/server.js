@@ -180,6 +180,20 @@ app.get('/admin/publish-test', async (req, res) => {
                   throw new Error('컨테이너 생성 실패: ' + (createData.error?.message || JSON.stringify(createData)));
           }
 
+          // 인스타 서버가 image_url에서 사진을 다 가져갈 때까지 기다림 (바로 발행하면 "Media ID is not available" 에러남)
+          let statusCode = 'IN_PROGRESS';
+          for (let i = 0; i < 15 && statusCode === 'IN_PROGRESS'; i++) {
+                  await new Promise((r) => setTimeout(r, 2000));
+                  const statusResp = await fetch(
+                            `https://graph.instagram.com/v21.0/${createData.id}?fields=status_code&access_token=${IG_ACCESS_TOKEN}`
+                          );
+                  const statusData = await statusResp.json();
+                  statusCode = statusData.status_code;
+          }
+          if (statusCode !== 'FINISHED') {
+                  throw new Error('이미지 준비 실패 (상태: ' + statusCode + ')');
+          }
+
           const publishResp = await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media_publish`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${IG_ACCESS_TOKEN}` },

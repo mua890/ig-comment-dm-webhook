@@ -213,6 +213,34 @@ app.get('/admin/publish-test', async (req, res) => {
           res.status(500).json({ success: false, error: err.message });
     }
 });
+
+// ── 테스트용: 실제 계정을 웹훅 알림에 구독시키기 (실전 확인 끝나면 지울 것) ──
+// 공식 문서: 앱 대시보드에서 Webhooks 등록 + comments 필드 구독만으로는 부족하고,
+// 이 계정이 진짜 알림을 받게 하려면 /me/subscribed_apps 를 한 번 호출해줘야 함
+// (그동안 메타 "테스트" 버튼으로 보낸 가짜 이벤트는 이 구독 없이도 오는 거라 착각하기 쉬움)
+app.get('/admin/subscribe', async (req, res) => {
+    if (req.query.key !== VERIFY_TOKEN) return res.sendStatus(403);
+    try {
+          const subResp = await fetch(
+                  `https://graph.instagram.com/v21.0/me/subscribed_apps?subscribed_fields=comments&access_token=${IG_ACCESS_TOKEN}`,
+            { method: 'POST' }
+                );
+          const subData = await subResp.json();
+          if (!subResp.ok) {
+                  throw new Error('구독 실패: ' + (subData.error?.message || JSON.stringify(subData)));
+          }
+
+          // 지금 뭐가 구독되어 있는지도 같이 확인
+          const checkResp = await fetch(
+                  `https://graph.instagram.com/v21.0/me/subscribed_apps?access_token=${IG_ACCESS_TOKEN}`
+                );
+          const checkData = await checkResp.json();
+
+          res.json({ success: true, subscribeResult: subData, currentSubscriptions: checkData });
+    } catch (err) {
+          res.status(500).json({ success: false, error: err.message });
+    }
+});
 app.listen(PORT, () => {
   console.log(`🚀 웹훅 서버 실행 중 — 포트 ${PORT}`);
 });

@@ -156,6 +156,45 @@ async function sendPrivateReply(commentId, text) {
 // 서버가 살아있는지 확인용 (배포 후 브라우저로 열어보면 됨)
 app.get('/', (_req, res) => res.send('OK - IG 댓글→DM 웹훅 서버 작동 중'));
 
+
+// ── 테스트용: 샘플 이미지 제공 (실전 확인 끝나면 지워도 됨) ──
+app.get('/sample.jpg', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public_sample.jpg'));
+});
+
+// ── 테스트용: 샘플 게시물 1장 발행 (실전 확인 끝나면 지울 것) ──
+// VERIFY_TOKEN을 key로 재사용 — 아무나 못 누르게 막는 용도, 테스트 전용 라우트라 간단하게
+app.get('/admin/publish-test', async (req, res) => {
+    if (req.query.key !== VERIFY_TOKEN) return res.sendStatus(403);
+    try {
+          const imageUrl = `https://${req.get('host')}/sample.jpg`;
+          const caption = '웹훅 연결 테스트용 게시물입니다. 댓글에 "지원금"이라고 달아보세요!';
+
+          const createResp = await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${IG_ACCESS_TOKEN}` },
+                  body: JSON.stringify({ image_url: imageUrl, caption }),
+          });
+          const createData = await createResp.json();
+          if (!createResp.ok) {
+                  throw new Error('컨테이너 생성 실패: ' + (createData.error?.message || JSON.stringify(createData)));
+          }
+
+          const publishResp = await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media_publish`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${IG_ACCESS_TOKEN}` },
+                  body: JSON.stringify({ creation_id: createData.id }),
+          });
+          const publishData = await publishResp.json();
+          if (!publishResp.ok) {
+                  throw new Error('발행 실패: ' + (publishData.error?.message || JSON.stringify(publishData)));
+          }
+
+          res.json({ success: true, mediaId: publishData.id });
+    } catch (err) {
+          res.status(500).json({ success: false, error: err.message });
+    }
+});
 app.listen(PORT, () => {
   console.log(`🚀 웹훅 서버 실행 중 — 포트 ${PORT}`);
 });

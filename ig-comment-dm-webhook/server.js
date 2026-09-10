@@ -201,7 +201,11 @@ app.get('/admin/publish-test', async (req, res) => {
           });
           const publishData = await publishResp.json();
           if (!publishResp.ok) {
-                  throw new Error('발행 실패: ' + (publishData.error?.message || JSON.stringify(publishData)));
+                        throw new Error(
+                                  '발행 실패: ' +
+                                    (publishData.error?.message || JSON.stringify(publishData)) +
+                                    ' | debug: creationId=' + createData.id + ' finalStatus=' + statusCode
+                                );
           }
 
           res.json({ success: true, mediaId: publishData.id });

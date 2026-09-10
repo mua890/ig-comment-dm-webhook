@@ -1,0 +1,17 @@
+{
+  "name": "ig-comment-dm-webhook",
+  "version": "1.0.0",
+  "description": "인스타그램 댓글 키워드 → 비공개 DM 자동응답 웹훅 서버 (Zen Enso Mua)",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
